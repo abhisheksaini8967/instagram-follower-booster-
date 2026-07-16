@@ -116,6 +116,13 @@
         .btn-back:hover {
             background: #2563eb;
         }
+        .btn-change-password {
+            background: #f59e0b;
+            color: #000;
+        }
+        .btn-change-password:hover {
+            background: #d97706;
+        }
         .count {
             color: #aaa;
         }
@@ -143,19 +150,109 @@
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
+        /* Change Password Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.hidden {
+            display: none;
+        }
+        .modal-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid #333;
+        }
+        .modal-content h2 {
+            color: #f59e0b;
+            margin-bottom: 20px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #0a0a0f;
+            color: #fff;
+        }
+        .modal-content .btn-save {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #4ade80;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-content .btn-save:hover {
+            background: #22c55e;
+        }
+        .modal-content .btn-cancel {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 8px;
+            background: #dc2743;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-content .btn-cancel:hover {
+            background: #bc1888;
+        }
+        .modal-error {
+            color: #dc2743;
+            margin-top: 10px;
+            display: none;
+        }
+        .modal-success {
+            color: #4ade80;
+            margin-top: 10px;
+            display: none;
+        }
+        .auto-fill-hide {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            width: 0;
+        }
+        .login-box {
+            position: relative;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔐 Admin Panel <span class="live-badge">● LIVE</span></h1>
 
+        <!-- LOGIN -->
         <div id="loginBox" class="login-box">
-            <input type="text" id="adminUser" placeholder="Username" value="admin">
-            <input type="password" id="adminPass" placeholder="Password" value="lisa123">
+            <!-- Hidden fields to trick auto-fill -->
+            <input type="text" style="display:none;">
+            <input type="password" style="display:none;">
+            
+            <input type="text" id="adminUser" placeholder="Username" autocomplete="off">
+            <input type="password" id="adminPass" placeholder="Password" autocomplete="new-password">
             <button onclick="login()">Login</button>
             <p id="loginError" class="error">Invalid credentials</p>
         </div>
 
+        <!-- DASHBOARD -->
         <div id="dashboard" class="hidden">
             <div class="top-bar">
                 <div>
@@ -163,6 +260,7 @@
                 </div>
                 <div>
                     <button class="btn btn-back" onclick="window.location.href='/'">← Back</button>
+                    <button class="btn btn-change-password" onclick="openChangePassword()">🔑 Change Password</button>
                     <button class="btn btn-refresh" onclick="fetchData()">🔄 Refresh</button>
                     <button class="btn btn-logout" onclick="logout()">Logout</button>
                 </div>
@@ -189,8 +287,25 @@
         </div>
     </div>
 
+    <!-- CHANGE PASSWORD MODAL -->
+    <div id="changePasswordModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🔑 Change Password</h2>
+            <input type="password" id="currentPass" placeholder="Current Password">
+            <input type="password" id="newPass" placeholder="New Password">
+            <input type="password" id="confirmPass" placeholder="Confirm New Password">
+            <button class="btn-save" onclick="changePassword()">Save</button>
+            <button class="btn-cancel" onclick="closeChangePassword()">Cancel</button>
+            <p id="modalError" class="modal-error"></p>
+            <p id="modalSuccess" class="modal-success"></p>
+        </div>
+    </div>
+
     <script>
         let token = null;
+
+        // Current admin password (will be updated dynamically)
+        let currentAdminPass = 'lisa123';
 
         async function login() {
             const username = document.getElementById('adminUser').value;
@@ -211,7 +326,6 @@
                     document.getElementById('dashboard').classList.remove('hidden');
                     document.getElementById('statusMsg').style.display = 'none';
                     fetchData();
-                    // Auto-refresh every 5 seconds (real-time)
                     if (window._refreshInterval) clearInterval(window._refreshInterval);
                     window._refreshInterval = setInterval(() => {
                         if (token) fetchData();
@@ -235,12 +349,9 @@
                     return; 
                 }
                 const data = await res.json();
-                console.log('📊 Data fetched:', data.submissions.length, 'records');
-                
                 document.getElementById('totalCount').textContent = data.submissions.length;
                 const tbody = document.getElementById('dataBody');
                 tbody.innerHTML = '';
-                
                 if (data.submissions.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666;">No data yet</td></tr>';
                 } else {
@@ -261,7 +372,6 @@
                 statusEl.style.color = '#4ade80';
                 setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
             } catch (err) {
-                console.error('Fetch error:', err);
                 statusEl.textContent = '❌ Failed to load';
                 statusEl.style.display = 'block';
                 statusEl.style.color = '#dc2743';
@@ -275,7 +385,81 @@
             document.getElementById('loginBox').classList.remove('hidden');
             document.getElementById('loginError').style.display = 'none';
             document.getElementById('statusMsg').style.display = 'none';
+            // Clear password fields
+            document.getElementById('adminPass').value = '';
         }
+
+        // Change Password Functions
+        function openChangePassword() {
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+            document.getElementById('modalError').style.display = 'none';
+            document.getElementById('modalSuccess').style.display = 'none';
+            document.getElementById('currentPass').value = '';
+            document.getElementById('newPass').value = '';
+            document.getElementById('confirmPass').value = '';
+        }
+
+        function closeChangePassword() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        }
+
+        async function changePassword() {
+            const current = document.getElementById('currentPass').value;
+            const newPass = document.getElementById('newPass').value;
+            const confirm = document.getElementById('confirmPass').value;
+            const errorEl = document.getElementById('modalError');
+            const successEl = document.getElementById('modalSuccess');
+
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (!current || !newPass || !confirm) {
+                errorEl.textContent = 'All fields are required';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            if (newPass.length < 4) {
+                errorEl.textContent = 'Password must be at least 4 characters';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            if (newPass !== confirm) {
+                errorEl.textContent = 'New passwords do not match';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/change-password', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token 
+                    },
+                    body: JSON.stringify({ currentPassword: current, newPassword: newPass })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    successEl.textContent = '✅ Password changed successfully!';
+                    successEl.style.display = 'block';
+                    currentAdminPass = newPass;
+                    setTimeout(closeChangePassword, 1500);
+                } else {
+                    errorEl.textContent = data.error || 'Failed to change password';
+                    errorEl.style.display = 'block';
+                }
+            } catch {
+                errorEl.textContent = 'Network error. Try again.';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Close modal on outside click
+        document.getElementById('changePasswordModal').addEventListener('click', function(e) {
+            if (e.target === this) closeChangePassword();
+        });
     </script>
 </body>
 </html>
