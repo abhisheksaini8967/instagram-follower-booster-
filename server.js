@@ -11,11 +11,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// Admin credentials (change these)
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'lisa123';
+// Admin credentials (default)
+let ADMIN_USER = 'admin';
+let ADMIN_PASS = 'lisa123';
 
 const DATA_FILE = path.join(__dirname, 'data.json');
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+// Load or create config
+function loadConfig() {
+    try {
+        if (fs.existsSync(CONFIG_FILE)) {
+            const config = JSON.parse(fs.readFileSync(CONFIG_FILE));
+            if (config.adminPass) ADMIN_PASS = config.adminPass;
+        }
+    } catch (e) { /* ignore */ }
+}
+loadConfig();
+
+function saveConfig() {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify({ adminPass: ADMIN_PASS }, null, 2));
+}
 
 function initData() {
     if (!fs.existsSync(DATA_FILE)) {
@@ -81,6 +97,32 @@ app.get('/api/admin/data', (req, res) => {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     res.json(readData());
+});
+
+// Change password endpoint
+app.post('/api/admin/change-password', (req, res) => {
+    const token = req.headers['authorization'];
+    if (token !== sessionToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current and new password required' });
+    }
+
+    if (currentPassword !== ADMIN_PASS) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    if (newPassword.length < 4) {
+        return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+
+    ADMIN_PASS = newPassword;
+    saveConfig();
+    console.log('✅ Admin password changed successfully');
+    res.json({ success: true, message: 'Password changed successfully' });
 });
 
 app.listen(PORT, () => {
