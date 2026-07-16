@@ -97,7 +97,7 @@
             color: #f09433;
             font-weight: bold;
         }
-        button[type="submit"] {
+        .btn-primary {
             width: 100%;
             padding: 14px;
             border: none;
@@ -108,10 +108,27 @@
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 12px;
         }
-        button[type="submit"]:hover {
+        .btn-primary:hover {
             transform: scale(1.02);
             box-shadow: 0 10px 30px rgba(220, 39, 67, 0.4);
+        }
+        .btn-admin {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #4ade80;
+            border-radius: 10px;
+            background: transparent;
+            color: #4ade80;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-admin:hover {
+            background: #4ade80;
+            color: #1a1a2e;
         }
         .popup {
             position: fixed;
@@ -155,6 +172,12 @@
             cursor: pointer;
             font-size: 16px;
         }
+        .admin-badge {
+            text-align: center;
+            margin-top: 15px;
+            color: #555;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -184,8 +207,11 @@
                 <input type="range" id="followerRange" min="10" max="200" value="100" step="1">
                 <div class="range-labels"><span>10</span><span>200</span></div>
             </div>
-            <button type="submit">🔥 Boost Now</button>
+            <button type="submit" class="btn-primary">🔥 Boost Now</button>
         </form>
+
+        <button class="btn-admin" onclick="window.location.href='/admin.html'">🔐 Admin Panel</button>
+        <div class="admin-badge">v1.0 | Data stored securely</div>
         
         <div id="popup" class="popup hidden">
             <div class="popup-content">
