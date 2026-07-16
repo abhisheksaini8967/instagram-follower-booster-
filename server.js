@@ -100,3 +100,13 @@ app.listen(PORT, async () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
     console.log('✅ Google Sheets ready for data collection');
 });
+
+app.post('/api/submit', async (req, res) => {
+    console.log(req.body);
+
+    try {
+        ...
+    } catch (error) {
+        console.error(error.response?.data || error);
+    }
+});
