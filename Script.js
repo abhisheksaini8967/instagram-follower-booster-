@@ -5,12 +5,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const popup = document.getElementById('popup');
     const closePopup = document.getElementById('closePopup');
 
-    // Update range display
     range.addEventListener('input', function() {
         display.textContent = this.value;
     });
 
-    // Form submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -25,14 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch('/api/submit', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
 
             if (response.ok) {
-                // Show success popup
                 popup.classList.remove('hidden');
                 form.reset();
                 range.value = 100;
@@ -45,12 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Close popup
     closePopup.addEventListener('click', function() {
         popup.classList.add('hidden');
     });
 
-    // Click outside popup to close
     popup.addEventListener('click', function(e) {
         if (e.target === popup) {
             popup.classList.add('hidden');
